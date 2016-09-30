@@ -6,6 +6,7 @@
 #include <memlayout.h>
 #include <pmm.h>
 #include <buddy_pmm.h>
+#include <ffma_pmm.h>
 #include <sync.h>
 #include <slab.h>
 #include <swap.h>
@@ -139,6 +140,7 @@ gdt_init(void) {
 static void
 init_pmm_manager(void) {
     pmm_manager = &buddy_pmm_manager;
+//	pmm_manager = &ffma_pmm_manager;
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }
@@ -152,6 +154,7 @@ init_memmap(struct Page *base, size_t n) {
 //alloc_pages - call pmm->alloc_pages to allocate a continuous n*PAGESIZE memory 
 struct Page *
 alloc_pages(size_t n) {
+	cprintf("alloc_pages n:%d", n);
     bool intr_flag;
     struct Page *page;
 try_again:
@@ -160,9 +163,8 @@ try_again:
         page = pmm_manager->alloc_pages(n);
     }
     local_intr_restore(intr_flag);
-	if (page == NULL && try_free_pages(n)) {
-		goto try_again;
-	}
+	if (page == NULL && try_free_pages(n)) goto try_again;
+//	cprintf("page addr:%x--page data:%d--", page, page->zone_num);
     return page;
 }
 
@@ -197,28 +199,21 @@ page_init(void) {
     struct e820map *memmap = (struct e820map *)(0x8000 + KERNBASE);
     uint64_t maxpa = 0;
 
-    cprintf("e820map:\n");
+    cprintf("e820map----memmap->nr_map:%d\n", memmap->nr_map);
     int i;
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
         cprintf("  memory: %08llx, [%08llx, %08llx], type = %d.\n",
                 memmap->map[i].size, begin, end - 1, memmap->map[i].type);
         if (memmap->map[i].type == E820_ARM) {
-            if (maxpa < end && begin < KMEMSIZE) {
-                maxpa = end;
-            }
+            if (maxpa < end && begin < KMEMSIZE)  maxpa = end; 
         }
     }
-    if (maxpa > KMEMSIZE) {
-        maxpa = KMEMSIZE;
-    }
-
-    extern char end[];
-
+    if (maxpa > KMEMSIZE) maxpa = KMEMSIZE; 
+	extern char end[];
     npage = maxpa / PGSIZE;
     pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
-
-    for (i = 0; i < npage; i ++) {
+    for (i = 0; i < npage; i ++) {	//make these memory reserverd for Page Struct
         SetPageReserved(pages + i);
     }
 
@@ -227,12 +222,9 @@ page_init(void) {
     for (i = 0; i < memmap->nr_map; i ++) {
         uint64_t begin = memmap->map[i].addr, end = begin + memmap->map[i].size;
         if (memmap->map[i].type == E820_ARM) {
-            if (begin < freemem) {
-                begin = freemem;
-            }
-            if (end > KMEMSIZE) {
-                end = KMEMSIZE;
-            }
+            if (begin < freemem)  begin = freemem; 
+            if (end > KMEMSIZE)  end = KMEMSIZE; 
+			
             if (begin < end) {
                 begin = ROUNDUP(begin, PGSIZE);
                 end = ROUNDDOWN(end, PGSIZE);
@@ -263,6 +255,7 @@ enable_paging(void) {
 //  perm: permission of this memory  
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
+	cprintf("boot_map_segment pgdir:%x la:%x size:%x pa:%x perm:%x----A\n", pgdir, la, size, pa, perm);
     assert(PGOFF(la) == PGOFF(pa));
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
@@ -280,9 +273,7 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t
 static void *
 boot_alloc_page(void) {
     struct Page *p = alloc_page();
-    if (p == NULL) {
-        panic("boot_alloc_page failed.\n");
-    }
+    if (p == NULL) panic("boot_alloc_page failed.\n"); 
     return page2kva(p);
 }
 
@@ -306,7 +297,8 @@ pmm_init(void) {
 
     // create boot_pgdir, an initial page directory(Page Directory Table, PDT)
     boot_pgdir = boot_alloc_page();
-    memset(boot_pgdir, 0, PGSIZE);
+    cprintf("boot_pgdir adr:%x~~~AAAA----\n", boot_pgdir);
+	memset(boot_pgdir, 0, PGSIZE);
     boot_cr3 = PADDR(boot_pgdir);
 
     check_pgdir();

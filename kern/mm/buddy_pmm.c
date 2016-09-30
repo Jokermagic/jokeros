@@ -52,10 +52,11 @@ buddy_init(void) {
 //buddy_init_memmap - build free_list for Page base follow  n continuous pages.
 static void
 buddy_init_memmap(struct Page *base, size_t n) {
+	cprintf("buddy_init_memmap: n:%d-------------AAAA_____\n", n);
     static int zone_num = 0;
     assert(n > 0 && zone_num < MAX_ZONE_NUM);
     struct Page *p = base;
-    for (; p != base + n; p ++) {
+    for (; p != base + n; p ++) { 
         assert(PageReserved(p));
         p->flags = p->property = 0;
         p->zone_num = zone_num;
@@ -63,13 +64,14 @@ buddy_init_memmap(struct Page *base, size_t n) {
     }
     p = zones[zone_num ++].mem_base = base;
     size_t order = MAX_ORDER, order_size = (1 << order);
-    while (n != 0) {
+    while (n != 0) {		//n=31683
         while (n >= order_size) {
             p->property = order;
             SetPageProperty(p);
             list_add(&free_list(order), &(p->page_link));
             n -= order_size, p += order_size;
             nr_free(order) ++;
+			cprintf("n:%d  order:%d  -AAA-\n", n, order);
         }
         order --;
         order_size >>= 1;
@@ -81,9 +83,7 @@ static inline size_t
 getorder(size_t n) {
     size_t order, order_size;
     for (order = 0, order_size = 1; order <= MAX_ORDER; order ++, order_size <<= 1) {
-        if (n <= order_size) {
-            return order;
-        }
+        if (n <= order_size) return order; 
     }
     panic("getorder failed. %d\n", n);
 }
@@ -230,7 +230,7 @@ buddy_nr_free_pages(void) {
 static void
 buddy_check(void) {
 	cprintf("buddy_pmm.c:buddy_check\n");
-	print_stackframe();
+//	print_stackframe();
     int i;
     int count = 0, total = 0;
     for (i = 0; i <= MAX_ORDER; i ++) {

@@ -193,15 +193,13 @@ swap_init(void) {
 bool
 try_free_pages(size_t n) {
 	cprintf("try_free_pages !\n");
-    if (!swap_init_ok || kswapd == NULL) {
-        return 0;
-    }
+    
+	if (!swap_init_ok || kswapd == NULL) return 0; 
+	
 	if (current == kswapd) {
 		panic("kswapd call try_free_pages!!.\n");
 	}
-	if (n >= (1 << 7)) {
-		return 0;
-	}
+	if (n >= (1 << 7)) return 0; 
 	pressure += n;
 	
 	wait_t __wait, *wait = &__wait;
@@ -218,11 +216,9 @@ try_free_pages(size_t n) {
 		}
 	}
 	local_intr_restore(intr_flag);
-	
 	schedule();
 	
 	return 1;
-    
 }
 
 static void 

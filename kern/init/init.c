@@ -20,11 +20,9 @@ int
 kern_init(void) {
     extern char edata[], end[];
     memset(edata, 0, end - edata);
-
     cons_init();                // init the console
 
-    const char *message = "Joker os is loading ...";
-    cprintf("%s\n\n", message);
+    cprintf("joker's os is loading.....\n\n");
 
     print_kerninfo();
 

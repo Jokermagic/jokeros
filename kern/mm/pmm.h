@@ -6,6 +6,7 @@
 #include <memlayout.h>
 #include <atomic.h>
 #include <assert.h>
+#include <stdio.h>
 
 // pmm_manager is a physical memory management class. A special pmm manager - XXX_pmm_manager
 // only needs to implement the methods in pmm_manager class, then XXX_pmm_manager can be used
@@ -67,18 +68,18 @@ __m_kva - KERNBASE;                                         \
  * address. It panics if you pass an invalid physical address.
  * */
 #define KADDR(pa) ({                                                    \
-uintptr_t __m_pa = (pa);                                    \
-				   size_t __m_ppn = PPN(__m_pa);                               \
-if (__m_ppn >= npage) {                                     \
-panic("KADDR called with invalid pa %08lx", __m_pa);    \
-}                                                           \
-(void *) (__m_pa + KERNBASE);                               \
+			uintptr_t __m_pa = (pa);                                    \
+			size_t __m_ppn = PPN(__m_pa);                               \
+			if (__m_ppn >= npage) {                                     \
+				panic("KADDR called with invalid pa %08lx", __m_pa);    \
+			}                                                           \
+			(void *) (__m_pa + KERNBASE);                               \
 })
 
 extern struct Page *pages;
-		extern size_t npage;
+extern size_t npage;
 
-		static inline ppn_t
+static inline ppn_t
 page2ppn(struct Page *page) {
     return page - pages;
 }

@@ -42,24 +42,29 @@ seta20.2:
 
     movb $0xdf, %al                                 # 0xdf -> port 0x60
     outb %al, $0x60
-
-probe_memory:
+	
+# search memory
+#对 0x8000 处的 32 位单元清零,即给位于 0x8000 处的
+#struct e820map 的结构域 nr_map 清零
+probe_memory:	
     movl $0, 0x8000
     xorl %ebx, %ebx
-    movw $0x8004, %di
+    movw $0x8004, %di	#表示设置调用 INT 15h BIOS 中断后,BIOS 返回的映射地址描述符的起始地址
 start_probe:
-    movl $0xE820, %eax
-    movl $20, %ecx
-    movl $SMAP, %edx
-    int $0x15
-    jnc cont
-    movw $12345, 0x8000
+    movl $0xE820, %eax		# INT 15 的中断调用参数
+    movl $20, %ecx 	#设置地址范围描述符的大小为 20 字节,其大小等于 struct e820map 的结构域 map 的大小
+    movl $SMAP, %edx	#设置 edx 为 534D4150h (即 4 个 ASCII 字符“SMAP”),这是一个约定
+    int $0x15	#调用 int 0x15 中断,要求 BIOS 返回一个用地址范围描述符表示的内存段信息
+    jnc cont	#如果 eflags 的 CF 位为 0,则表示还有内存段需要探测
+    movw $12345, 0x8000	#探测有问题,结束探测
     jmp finish_probe
 cont:
-    addw $20, %di
-    incl 0x8000
-    cmpl $0, %ebx
+    addw $20, %di	#设置下一个 BIOS 返回的映射地址描述符的起始地址
+    incl 0x8000	#递增 struct e820map 的结构域 nr_map
+    cmpl $0, %ebx #如果 INT0x15 返回的 ebx 为零,表示探测结束,否则继续探测
     jnz start_probe
+#上述代码正常执行完毕后,在 0x8000 地址处保存了从 BIOS 中获得的内存分布信息,此信息按照 struct e820map 的设置来进行填充。
+#这部分信息将在 bootloader 启动 ucore 后,由ucore 的 page_init 函数来根据 struct e820map 的 memmap(定义了起始地址为 0x8000)
 finish_probe:
 
     # Switch from real to protected mode, using a bootstrap GDT

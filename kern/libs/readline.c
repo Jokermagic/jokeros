@@ -23,15 +23,11 @@ static char buf[BUFSIZE];
  * */
 char *
 readline(const char *prompt) {
-    if (prompt != NULL) {
-        cprintf("%s", prompt);
-    }
+    if (prompt != NULL) { cprintf("%s", prompt); }
     int i = 0, c;
     while (1) {
         c = getchar();
-        if (c < 0) {
-            return NULL;
-        }
+        if (c < 0) { return NULL; }
         else if (c >= ' ' && i < BUFSIZE - 1) {
             cputchar(c);
             buf[i ++] = c;

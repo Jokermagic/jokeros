@@ -382,9 +382,8 @@ void *
 kmalloc(size_t size) {
     assert(size > 0);
     size_t order = getorder(size);
-    if (order > MAX_SIZE_ORDER) {
-        return NULL;
-    }
+    if (order > MAX_SIZE_ORDER) return NULL;  
+	
     return kmem_cache_alloc(slab_cache + (order - MIN_SIZE_ORDER));
 }
 
