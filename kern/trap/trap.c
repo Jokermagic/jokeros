@@ -18,7 +18,6 @@
 #include <error.h>
 
 #define TICK_NUM 30
-#define TICK_SEC 100
 
 static struct gatedesc idt[256] = {{0}};
 
@@ -99,9 +98,8 @@ print_trapframe(struct trapframe *tf) {
 
     int i, j;
     for (i = 0, j = 1; i < sizeof(IA32flags) / sizeof(IA32flags[0]); i ++, j <<= 1) {
-        if ((tf->tf_eflags & j) && IA32flags[i] != NULL) {
+        if ((tf->tf_eflags & j) && IA32flags[i] != NULL)
             cprintf("%s,", IA32flags[i]);
-        }
     }
     cprintf("IOPL=%d\n", (tf->tf_eflags & FL_IOPL_MASK) >> 12);
 
@@ -190,10 +188,6 @@ trap_dispatch(struct trapframe *tf) {
 				assert(current != NULL);
 				current->need_resched = 1;
 			}
-//			if (tick_sec % TICK_SEC == 0) {
-//				cprintf("lll--A");
-//				time ++;
-//			}
 			traverse_Timer();
 			break;
 		case IRQ_OFFSET + IRQ_COM1:
@@ -223,9 +217,7 @@ trap_dispatch(struct trapframe *tf) {
 void
 trap(struct trapframe *tf) {
     // used for previous projects
-	if (current == NULL) {
-		trap_dispatch(tf);
-	}
+	if (current == NULL) trap_dispatch(tf); 
 	else {
 		// keep a trapframe chain in stack
 		struct trapframe *otf = current->tf;
@@ -237,12 +229,8 @@ trap(struct trapframe *tf) {
 		
 		current->tf = otf;
 		if (!in_kernel) {
-			if (current->flags & PF_EXITING) {
-				do_exit(-E_KILLED);
-			}
-			if (current->need_resched) {
-				schedule();
-			}
+			if (current->flags & PF_EXITING) do_exit(-E_KILLED); 
+			if (current->need_resched)  schedule(); 
 		}
 	}
 }
