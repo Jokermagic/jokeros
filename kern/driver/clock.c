@@ -2,6 +2,8 @@
 #include <trap.h>
 #include <stdio.h>
 #include <picirq.h>
+#include <list.h>
+#include <clock.h>
 
 /* *
  * Support for time-related hardware gadgets - the 8253 timer,
@@ -23,7 +25,14 @@
 #define TIMER_RATEGEN   0x04                    // mode 2, rate generator
 #define TIMER_16BIT     0x30                    // r/w counter 16 bits, LSB first
 
+#define MAX_TIMER		1000
+
 volatile size_t ticks;
+volatile size_t tick_sec;
+
+static int last_timer = 0;
+
+list_entry_t timer_list;
 
 /* *
  * clock_init - initialize 8253 clock to interrupt 100 times per second,
@@ -38,8 +47,28 @@ clock_init(void) {
 
     // initialize time counter 'ticks' to zero
     ticks = 0;
-
+	tick_sec = 0;
     cprintf("++ setup timer interrupts\n");
     pic_enable(IRQ_TIMER);
+	
+	list_init(&timer_list);
 }
 
+struct Timer* alloc_timer() {
+	struct Timer *timer = (struct Timer *)kmalloc(sizeof(struct Timer));
+	timer->tick = 0;
+	list_add(&timer_list, &(timer->timer_link));
+	return timer;
+}
+
+void free_timer(struct Timer *timer) {
+	list_del(&(timer->timer_link));
+}
+
+void traverse_Timer() {
+	list_entry_t *le = &timer_list;
+	while((le= list_next(le)) != &timer_list) {
+		struct Timer *p = le2Timer(le, timer_link);
+		++p->tick;
+	}
+}

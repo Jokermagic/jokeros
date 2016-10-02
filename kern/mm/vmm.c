@@ -530,10 +530,8 @@ static void
 check_vmm(void) {
     size_t nr_free_pages_store = nr_free_pages();
     size_t slab_allocated_store = slab_allocated();
-
     check_vma_struct();
     check_pgfault();
-
     assert(nr_free_pages_store == nr_free_pages());
     assert(slab_allocated_store == slab_allocated());
 

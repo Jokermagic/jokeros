@@ -18,6 +18,7 @@
 #include <error.h>
 
 #define TICK_NUM 30
+#define TICK_SEC 100
 
 static struct gatedesc idt[256] = {{0}};
 
@@ -183,12 +184,17 @@ trap_dispatch(struct trapframe *tf) {
 			syscall();
 			break;
 		case IRQ_OFFSET + IRQ_TIMER:
-			ticks ++;
+			ticks ++; tick_sec ++;
 			run_timer_list();
 			if (ticks % TICK_NUM == 0) {
 				assert(current != NULL);
 				current->need_resched = 1;
 			}
+//			if (tick_sec % TICK_SEC == 0) {
+//				cprintf("lll--A");
+//				time ++;
+//			}
+			traverse_Timer();
 			break;
 		case IRQ_OFFSET + IRQ_COM1:
 		case IRQ_OFFSET + IRQ_KBD:

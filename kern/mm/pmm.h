@@ -79,6 +79,7 @@ __m_kva - KERNBASE;                                         \
 extern struct Page *pages;
 extern size_t npage;
 
+/* return the numid of page, means how many Page before it */
 static inline ppn_t
 page2ppn(struct Page *page) {
     return page - pages;
@@ -91,9 +92,7 @@ page2pa(struct Page *page) {
 
 static inline struct Page *
 pa2page(uintptr_t pa) {
-    if (PPN(pa) >= npage) {
-        panic("pa2page called with invalid pa");
-    }
+    if (PPN(pa) >= npage) panic("pa2page called with invalid pa"); 
     return &pages[PPN(pa)];
 }
 

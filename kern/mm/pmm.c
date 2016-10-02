@@ -154,7 +154,6 @@ init_memmap(struct Page *base, size_t n) {
 //alloc_pages - call pmm->alloc_pages to allocate a continuous n*PAGESIZE memory 
 struct Page *
 alloc_pages(size_t n) {
-	cprintf("alloc_pages n:%d", n);
     bool intr_flag;
     struct Page *page;
 try_again:
@@ -255,7 +254,6 @@ enable_paging(void) {
 //  perm: permission of this memory  
 static void
 boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t perm) {
-	cprintf("boot_map_segment pgdir:%x la:%x size:%x pa:%x perm:%x----A\n", pgdir, la, size, pa, perm);
     assert(PGOFF(la) == PGOFF(pa));
     size_t n = ROUNDUP(size + PGOFF(la), PGSIZE) / PGSIZE;
     la = ROUNDDOWN(la, PGSIZE);
@@ -297,7 +295,6 @@ pmm_init(void) {
 
     // create boot_pgdir, an initial page directory(Page Directory Table, PDT)
     boot_pgdir = boot_alloc_page();
-    cprintf("boot_pgdir adr:%x~~~AAAA----\n", boot_pgdir);
 	memset(boot_pgdir, 0, PGSIZE);
     boot_cr3 = PADDR(boot_pgdir);
 

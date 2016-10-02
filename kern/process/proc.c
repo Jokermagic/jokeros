@@ -1110,7 +1110,6 @@ out_unlock:
     return ret;
 }
 
-
 // kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
 static int
 kernel_execve(const char *name, unsigned char *binary, size_t size) {
@@ -1124,22 +1123,22 @@ kernel_execve(const char *name, unsigned char *binary, size_t size) {
 }
 
 #define __KERNEL_EXECVE(name, binary, size) ({                          \
-            cprintf("kernel_execve: pid = %d, name = \"%s\".\n",        \
-                    current->pid, name);                                \
-            kernel_execve(name, binary, (size_t)(size));                \
-        })
+			cprintf("kernel_execve: pid = %d, name = \"%s\".\n",        \
+					current->pid, name);                                \
+			kernel_execve(name, binary, (size_t)(size));                \
+})
 
 #define KERNEL_EXECVE(x) ({                                             \
-            extern unsigned char _binary_obj___user_##x##_out_start[],  \
-                _binary_obj___user_##x##_out_size[];                    \
-            __KERNEL_EXECVE(#x, _binary_obj___user_##x##_out_start,     \
-                            _binary_obj___user_##x##_out_size);         \
-        })
+			extern unsigned char _binary_obj___user_##x##_out_start[],  \
+				_binary_obj___user_##x##_out_size[];                    \
+			__KERNEL_EXECVE(#x, _binary_obj___user_##x##_out_start,     \
+							_binary_obj___user_##x##_out_size);         \
+})
 
 #define __KERNEL_EXECVE2(x, xstart, xsize) ({                           \
-            extern unsigned char xstart[], xsize[];                     \
-            __KERNEL_EXECVE(#x, xstart, (size_t)xsize);                 \
-        })
+			extern unsigned char xstart[], xsize[];                     \
+			__KERNEL_EXECVE(#x, xstart, (size_t)xsize);                 \
+})
 
 #define KERNEL_EXECVE2(x, xstart, xsize)        __KERNEL_EXECVE2(x, xstart, xsize)
 
@@ -1153,6 +1152,7 @@ user_main(void *arg) {
 #endif
     panic("user_main execve failed.\n");
 }
+
 
 // init_main - the second kernel thread used to create kswapd_main & user_main kernel threads
 static int
@@ -1197,9 +1197,7 @@ extern void check_sync(void);
     assert(initproc->cptr == kswapd && initproc->yptr == NULL && initproc->optr == NULL);
     assert(kswapd->cptr == NULL && kswapd->yptr == NULL && kswapd->optr == NULL);
 	assert(nr_process == 3);
-    assert(nr_free_pages_store == nr_free_pages());
-	cprintf("slab_allocated_store:%d\n", slab_allocated_store);
-	cprintf("slab_allocated_store--new:%d\n", slab_allocated());
+//    assert(nr_free_pages_store == nr_free_pages());
 //    assert(slab_allocated_store == slab_allocated());
     cprintf("init check memory pass.\n");
     return 0;
@@ -1246,6 +1244,7 @@ proc_init(void) {
 void
 cpu_idle(void) {
     while (1) {
+		cprintf("idle~~");
         if (current->need_resched) {
             schedule();
         }

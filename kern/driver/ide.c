@@ -80,6 +80,7 @@ ide_init(void) {
     static_assert((SECTSIZE % 4) == 0);
     unsigned short ideno, iobase;
     for (ideno = 0; ideno < MAX_IDE; ideno ++) {
+		cprintf("ideno:%d---AA--", ideno);
         /* assume that no device here */
         ide_devices[ideno].valid = 0;
 

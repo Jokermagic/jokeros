@@ -296,9 +296,7 @@ kmem_cache_slabmgmt(kmem_cache_t *cachep, struct Page *page) {
 static bool
 kmem_cache_grow(kmem_cache_t *cachep) {
 	struct Page *page = alloc_pages(1 << cachep->page_order);
-	if (page == NULL) {
-		goto failed;
-	}
+	if (page == NULL)  goto failed; 
 
 	slab_t *slabp;
 	if ((slabp = kmem_cache_slabmgmt(cachep, page)) == NULL) {

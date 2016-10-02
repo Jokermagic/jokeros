@@ -286,34 +286,26 @@ static swap_entry_t
 try_alloc_swap_entry(void) {
     static size_t next = 1;
     size_t empty = 0, zero = 0, end = next;
-    do {
+	do {
         switch (mem_map[next]) {
 			case SWAP_UNUSED:
 				empty = next;
 				break;
 			case 0:
-				if (zero == 0) {
-					zero = next;
-				}
+				if (zero == 0) zero = next; 
 				break;
         }
-        if (++ next == max_swap_offset) {
-            next = 1;
-        }
+        if (++ next == max_swap_offset) next = 1; 
     } while (empty == 0 && next != end);
 
     swap_entry_t entry = 0;
-    if (empty != 0) {
-        entry = (empty << 8);
-    }
+    if (empty != 0) entry = (empty << 8); 
     else if (zero != 0) {
         entry = (zero << 8);
         struct Page *page = swap_hash_find(entry);
         assert(page != NULL && PageSwap(page));
         swap_list_del(page);
-        if (page_ref(page) == 0) {
-            swap_free_page(page);
-        }
+        if (page_ref(page) == 0) swap_free_page(page); 
         else {
             swap_page_del(page);
         }
