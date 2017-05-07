@@ -228,7 +228,9 @@ page_init(void) {
                 begin = ROUNDUP(begin, PGSIZE);
                 end = ROUNDDOWN(end, PGSIZE);
                 if (begin < end) {
+                    cprintf("pa2page begin:%x", pa2page(begin));
                     init_memmap(pa2page(begin), (end - begin) / PGSIZE);
+
                 }
             }
         }
@@ -238,7 +240,7 @@ page_init(void) {
 static void
 enable_paging(void) {
     lcr3(boot_cr3);
-
+    cprintf("cr3:%x   ", boot_cr3);
     // turn on paging
     uint32_t cr0 = rcr0();
     cr0 |= CR0_PE | CR0_PG | CR0_AM | CR0_WP | CR0_NE | CR0_TS | CR0_EM | CR0_MP;
@@ -261,7 +263,11 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, uintptr_t pa, uint32_t
     for (; n > 0; n --, la += PGSIZE, pa += PGSIZE) {
         pte_t *ptep = get_pte(pgdir, la, 1);
         assert(ptep != NULL);
+//        cprintf("ptep:%x *ptep:%x n:%x pa:%x la:%x\n", ptep, *ptep, pa, la);
+
         *ptep = pa | PTE_P | perm;
+
+
     }
 }
 
@@ -320,14 +326,22 @@ pmm_init(void) {
     //reload gdt(third time,the last time) to map all physical memory
     //virtual_addr 0~4G=liear_addr 0~4G
     //then set kernel stack(ss:esp) in TSS, setup TSS in gdt, load TSS
+    cprintf("wwwwwwwwwwwwwww\n");
     gdt_init();
 
     //disable the map of virtual_addr 0~4M
     boot_pgdir[0] = 0;
 
+    cprintf("boot_pgdir:%x\n", boot_pgdir);
+
     //now the basic virtual memory map(see memalyout.h) is established.
     //check the correctness of the basic virtual memory map.
+
     check_boot_pgdir();
+
+    for(int i=0;i<1024;i++) {
+        cprintf("pgdir[%d]:%x\n", i, boot_pgdir[i]);
+    }
 
     print_pgdir();
 
@@ -673,11 +687,11 @@ print_pgdir(void) {
     while ((perm = get_pgtable_items(0, NPDEENTRY, right, vpd, &left, &right)) != 0) {
         cprintf("PDE(%03x) %08x-%08x %08x %s\n", right - left,
                 left * PTSIZE, right * PTSIZE, (right - left) * PTSIZE, perm2str(perm));
-        size_t l, r = left * NPTEENTRY;
-        while ((perm = get_pgtable_items(left * NPTEENTRY, right * NPTEENTRY, r, vpt, &l, &r)) != 0) {
-            cprintf("  |-- PTE(%05x) %08x-%08x %08x %s\n", r - l,
-                    l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
-        }
+//        size_t l, r = left * NPTEENTRY;
+//        while ((perm = get_pgtable_items(left * NPTEENTRY, right * NPTEENTRY, r, vpt, &l, &r)) != 0) {
+//            cprintf("  |-- PTE(%05x) %08x-%08x %08x %s\n", r - l,
+//                    l * PGSIZE, r * PGSIZE, (r - l) * PGSIZE, perm2str(perm));
+//        }
     }
     cprintf("--------------------- END ---------------------\n");
 }

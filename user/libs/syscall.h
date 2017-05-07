@@ -36,6 +36,7 @@ int sys_write(int fd, void *base, size_t len);
 int sys_fstat(int fd, struct stat *stat);
 int sys_dup(int fd1, int fd2);
 
+int sys_hello(void* func);
 
 #endif /* !__USER_LIBS_SYSCALL_H__ */
 

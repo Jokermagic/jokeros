@@ -216,6 +216,14 @@ sys_dup(uint32_t arg[]) {
     return sysfile_dup(fd1, fd2);
 }
 
+static uint32_t
+sys_hello(uint32_t arg[]) {
+    cprintf("kernel sys_hello\n");
+    int(*func)() = arg[0];
+    func();
+    return 1;
+}
+
 static uint32_t (*syscalls[])(uint32_t arg[]) = {
     [SYS_exit]              sys_exit,
     [SYS_fork]              sys_fork,
@@ -247,6 +255,7 @@ static uint32_t (*syscalls[])(uint32_t arg[]) = {
     [SYS_write]             sys_write,
     [SYS_fstat]             sys_fstat,
     [SYS_dup]               sys_dup,
+    [SYS_hello]             sys_hello,
 
 };
 

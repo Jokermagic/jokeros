@@ -1148,7 +1148,7 @@ user_main(void *arg) {
 #ifdef TEST
     KERNEL_EXECVE2(TEST, TESTSTART, TESTSIZE);
 #else
-    KERNEL_EXECVE(hello2);
+    KERNEL_EXECVE(hello);
 #endif
     panic("user_main execve failed.\n");
 }
