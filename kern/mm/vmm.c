@@ -11,9 +11,9 @@
 #include <shmem.h>
 #include <proc.h>
 
-/* 
+/*
   vmm design include two parts: mm_struct (mm) & vma_struct (vma)
-  mm is the memory manager for the set of continuous virtual memory  
+  mm is the memory manager for the set of continuous virtual memory
   area which have the same PDT. vma is a continuous virtual memory area.
   There a linear link list for vma & a redblack link list for vma in mm.
 ---------------
@@ -30,7 +30,7 @@
      struct vma_struct * find_vma(struct mm_struct *mm, uintptr_t addr)
    local functions
      inline void check_vma_overlap(struct vma_struct *prev, struct vma_struct *next)
-     inline struct vma_struct * find_vma_rb(rb_tree *tree, uintptr_t addr) 
+     inline struct vma_struct * find_vma_rb(rb_tree *tree, uintptr_t addr)
      inline void insert_vma_rb(rb_tree *tree, struct vma_struct *vma, ....
      inline int vma_compare(rb_node *node1, rb_node *node2)
 ---------------
@@ -619,6 +619,8 @@ check_pgfault(void) {
     for (i = 0; i < 100; i ++) {
         sum -= *(char *)(addr + i);
     }
+
+    cprintf("sum:%d\n", sum);
     assert(sum == 0);
 
     page_remove(pgdir, ROUNDDOWN(addr, PGSIZE));
@@ -655,6 +657,8 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
             goto failed;
         }
     }
+
+    cprintf("error_code:%d", error_code);
 
     switch (error_code & 3) {
 		default:
@@ -752,4 +756,3 @@ failed:
     unlock_mm(mm);
     return ret;
 }
-
