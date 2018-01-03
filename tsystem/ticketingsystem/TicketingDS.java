@@ -9,6 +9,8 @@ import java.util.Random;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -126,18 +128,25 @@ public class TicketingDS implements TicketingSystem {
 	public class Coach {
 		int seatnum;
 		int stationnum;
-
+		
 		HashMap<String, ConcurrentLinkedDeque> hashMap;
+		HashMap<String, AtomicInteger> tickets;
+
+		AtomicBoolean needflush;
 
 		public Coach(int seatnum, int stationnum) {
 
 			this.seatnum = seatnum;
 			this.stationnum = stationnum;
+			
+			needflush = new AtomicBoolean(false);
 
 			hashMap = new HashMap<String, ConcurrentLinkedDeque>();
+			tickets = new HashMap<String, AtomicInteger>();
 			for (int i = 1; i < stationnum; i++) {
 				for (int j = i + 1; j <= stationnum; j++) {
 					hashMap.put(i + "_" + j, new ConcurrentLinkedDeque<Integer>());
+					tickets.put(i + "_" + j, new AtomicInteger(seatnum));
 				}
 			}
 
@@ -152,13 +161,28 @@ public class TicketingDS implements TicketingSystem {
 			if (departure < 1 || arrival > stationnum)
 				return 0;
 
-			int sum = 0;
-			for (int left = 1; left <= departure; left++) {
-				for (int right = arrival; right <= stationnum; right++) {
-					sum += hashMap.get(left + "_" + right).size();
-				}
+			if (needflush.get() == false) {
+				return tickets.get(departure+"_"+arrival).get();
 			}
-			return sum;
+			else {
+				int[][] arr = new int[stationnum+1][stationnum+1];
+				for(int i=1; i<stationnum; i++) {
+					for(int j=i+1; j<=stationnum; j++) {
+						arr[i][j] = hashMap.get(i + "_" + j).size();
+					}
+				}
+
+				for(int i=1; i<stationnum; i++) {
+					for(int j=i+1; j<=stationnum; j++) {
+						tickets.get(i+"_"+j).set(0);
+						for(int k=i+1; k<=j; k++) {
+							tickets.get(i+"_"+k).getAndAdd(arr[i][j]);
+						}
+					}
+				}
+				needflush.set(false);
+				return tickets.get(departure+"_"+arrival).get();
+			}
 		}
 
 		public int buy(int departure, int arrival) {
@@ -172,6 +196,7 @@ public class TicketingDS implements TicketingSystem {
 					if (deque.size() > 0) {
 						try {
 							int seat = (int)deque.pop();
+							needflush.set(true);
 							if (left < departure)
 								hashMap.get(left + "_" + departure).push(seat);
 							if (arrival < right)
@@ -189,7 +214,7 @@ public class TicketingDS implements TicketingSystem {
 
 		public boolean refund(Ticket ticket) {
 			if (ticket.seat < 1 || ticket.seat > seatnum) return false;
-
+			needflush.set(true);
 			ConcurrentLinkedDeque leftqueue = null, rightqueue = null;
 			int left, right;
 
