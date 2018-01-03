@@ -1,16 +1,11 @@
 package ticketingsystem;
 
-import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.Random;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -23,7 +18,7 @@ public class TicketingDS implements TicketingSystem {
 	int stationnum = 10;
 	int threadnum = 16;
 
-	AtomicLong aLong = new AtomicLong(1);; // for tid
+	AtomicLong aLong; // for tid
 	Route[] routes;
 
 	public TicketingDS(int routenum, int coachnum, int seatnum, int stationnum, int threadnum) {
@@ -32,6 +27,9 @@ public class TicketingDS implements TicketingSystem {
 		this.seatnum = seatnum;
 		this.stationnum = stationnum;
 		this.threadnum = threadnum;
+
+		aLong = new AtomicLong();
+		aLong.set(1);
 
 		this.routes = new Route[routenum];
 		for (int i = 0; i < routenum; i++) {
@@ -49,9 +47,8 @@ public class TicketingDS implements TicketingSystem {
 		ticket.seat = 0;
 		ticket.departure = departure;
 		ticket.arrival = arrival;
-		if (routes[route - 1].buy(ticket) == false) {
+		if (routes[route - 1].buy(ticket) == false)
 			return null;
-		}
 		return ticket;
 	}
 
@@ -90,37 +87,30 @@ public class TicketingDS implements TicketingSystem {
 
 		public int inquiry(int departure, int arrival) {
 			int tickets = 0;
-			for (int i = 0; i < coachnum; i++) {
+			for(int i=0; i<coachnum; i++) {
 				tickets += coachs[i].inquiry(departure, arrival);
 			}
 			return tickets;
 		}
 
 		public boolean buy(Ticket ticket) {
-			// System.out.println("want to buy " + ticket.departure + " to " + ticket.arrival);
 			int randcoach = new Random().nextInt(coachnum) % coachnum;
 			for (int i = randcoach; i < randcoach + coachnum; i++) {
 				int coachid = i % coachnum;
-				if (coachs[coachid].inquiry(ticket.departure, ticket.arrival) > 0) {
+				if (coachs[coachid].inquiry(ticket.departure, ticket.arrival)>0) {
 					int seat = coachs[coachid].buy(ticket.departure, ticket.arrival);
-					if (seat > 0) { // successfully bought
-						ticket.coach = coachid + 1;
+					if(seat > 0) { 	// successfully bought
+						ticket.coach = coachid+1;
 						ticket.seat = seat;
-						// System.out.println("bought ticket " + ticket.coach + " " + ticket.seat);
 						return true;
 					}
-					// System.out.println("buy error");
 				}
 			}
-			// System.out.println(inquiry(ticket.departure, ticket.arrival));
-			// System.out.println(inquiry(1, stationnum));
 			return false;
 		}
 
 		public boolean refund(Ticket ticket) {
-			if (ticket.coach < 1 || ticket.coach > coachnum)
-				return false;
-			// System.out.println("want to refund seat:" + ticket.seat+ " " + ticket.departure + " to " + ticket.arrival);
+			if (ticket.coach < 1 || ticket.coach > coachnum) return false; 
 			return coachs[ticket.coach - 1].refund(ticket);
 		}
 
@@ -133,137 +123,119 @@ public class TicketingDS implements TicketingSystem {
 		int seatnum;
 		int stationnum;
 
-		HashMap<String, ConcurrentLinkedDeque> hashMap;
+		Seat[] seats;
 
 		AtomicIntegerArray ticketsArr;
 
 		public Coach(int seatnum, int stationnum) {
-
 			this.seatnum = seatnum;
 			this.stationnum = stationnum;
 
-			hashMap = new HashMap<String, ConcurrentLinkedDeque>();
-
-			for (int i = 1; i < stationnum; i++) {
-				for (int j = i + 1; j <= stationnum; j++) {
-					hashMap.put(i + "_" + j, new ConcurrentLinkedDeque<Integer>());
-				}
+			seats = new Seat[seatnum];
+			for (int i = 0; i < seatnum; i++) {
+				seats[i] = new Seat(stationnum);
 			}
+
 			ticketsArr = new AtomicIntegerArray((stationnum - 1) * (stationnum - 1));
 			for (int i = 0; i < stationnum - 1; i++) {
-				for (int j = 0; j < stationnum - 1; j++)
-				if (j>= i) {
+				for (int j = i; j < stationnum - 1; j++) {
 					ticketsArr.set(i * (stationnum - 1) + j, seatnum);
 				}
 			}
-
-			ConcurrentLinkedDeque deque = hashMap.get(1 + "_" + stationnum);
-			for (int k = 1; k <= seatnum; k++) {
-				deque.add(k);
-			}
-
-
 		}
 
 		public int inquiry(int departure, int arrival) {
-			if (departure < 1 || arrival > stationnum)
-				return 0;
-
+			if (departure<1 || arrival>stationnum) return 0;
 			int pos = (departure - 1) * (stationnum - 1) + arrival - 1 - 1;
 			return ticketsArr.get(pos);
 		}
 
 		public int buy(int departure, int arrival) {
-			if (departure < 1 || arrival > stationnum)
-				return -1;
-				
-			ConcurrentLinkedDeque deque;
-			for (int left = departure; left >= 1; left--) {
-				for (int right = arrival; right <= stationnum; right++) {
-					deque = hashMap.get(left + "_" + right);
-					if (hashMap.get(left + "_" + right).size() > 0) {
-						try {
-							int seat = (int) deque.pop();
-							if (left < departure)
-								hashMap.get(left + "_" + departure).push(seat);
-							if (arrival < right)
-								hashMap.get(arrival + "_" + right).push(seat);
-
-							for (int i = left-1; i < arrival - 1; i++) {
-								for (int j = departure - 1; j < right-1; j++) {
-									if (j >= i) {
-										ticketsArr.getAndDecrement(i * (stationnum - 1) + j);
-									}
-								}
-							}
-							return seat;
-						} catch (NoSuchElementException e) {
-							//TODO: handle exception
-						}
-
-					}
-				}
+			int randseat = new Random().nextInt(seatnum) % seatnum;
+			for (int i = randseat; i < randseat + seatnum; i++) {
+				int seatid = i % seatnum;
+				if(seats[seatid].buy(departure, arrival, ticketsArr)) 
+					return seatid + 1;
 			}
 			return -1;
 		}
 
 		public boolean refund(Ticket ticket) {
-			if (ticket.seat < 1 || ticket.seat > seatnum)
+			if (ticket.seat < 1 || ticket.seat > seatnum) {
 				return false;
-				
-			ConcurrentLinkedDeque leftqueue = null, rightqueue = null;
-			int left, right;
+			}
+			return seats[ticket.seat - 1].refund(ticket.departure, ticket.arrival, ticketsArr);
+		}
 
-			for (left = ticket.departure - 1; left >= 1; left--) {
-				leftqueue = hashMap.get(left + "_" + ticket.departure);
-				// System.out.println(left+" " +leftqueue);
-				if (leftqueue.contains(ticket.seat)) {
-					leftqueue.remove(ticket.seat);
+	}
+
+	/**
+	 * Seat
+	 */
+	public class Seat {
+		BitSet segset; // n stationnumet have n-1 segments
+
+		public Seat(int stationnum) {
+			segset = new BitSet(stationnum - 1);
+			segset.clear();
+		}
+
+		synchronized public boolean buy(int departure, int arrival, AtomicIntegerArray ticketsArr) {
+			BitSet bs = segset.get(departure - 1, arrival - 1);
+			if (!bs.isEmpty()) return false;
+
+			int left = 0, right = stationnum - 1;
+			for (int i = departure - 1; i >= 0; i--) {
+				if (segset.get(i)) {
+					left = i + 1;
 					break;
 				}
 			}
-			if (left < 1) left = 1;
-			
-			for (right = ticket.arrival + 1; right <= stationnum; right++) {
-				rightqueue = hashMap.get(ticket.arrival + "_" + right);
-				if (rightqueue.contains(ticket.seat)) {
-					rightqueue.remove(ticket.seat);
+			right = segset.nextSetBit(arrival - 2);
+			if (right > stationnum - 1 || right == -1) {
+				right = stationnum - 1;
+			}
+			right--;
+
+			for (int i = left; i < arrival - 1; i++) {
+				for (int j = departure - 1; j <= right; j++) {
+					if (j >= i) {
+						ticketsArr.getAndDecrement(i * (stationnum - 1) + j);
+					}
+				}
+			}
+			segset.set(departure - 1, arrival - 1);
+			return true;
+		}
+
+		synchronized public boolean refund(int departure, int arrival, AtomicIntegerArray ticketsArr) {
+			if (departure < 1 || arrival > stationnum) {
+				return false;
+			}
+			int left = 0, right = stationnum - 1;
+			for (int i = departure - 1 - 1; i >= 0; i--) {
+				if (segset.get(i)) {
+					left = i + 1;
 					break;
 				}
 			}
-			if (right > stationnum) right = stationnum;
+			right = segset.nextSetBit(arrival - 1);
+			if (right > stationnum - 1 || right == -1) {
+				right = stationnum - 1;
+			}
+			right--;
 
-
-
-			hashMap.get(left + "_" + right).add(ticket.seat);
-
-			// System.out.println("add:"+hashMap.get(left + "_" + right));
-
-			for (int i = left-1; i < ticket.arrival - 1; i++) {
-				for (int j = ticket.departure - 1; j < right-1; j++) {
+			for (int i = left; i < arrival - 1; i++) {
+				for (int j = departure - 1; j <= right; j++) {
 					if (j >= i) {
 						ticketsArr.getAndIncrement(i * (stationnum - 1) + j);
 					}
 				}
 			}
-
-			// System.out.println(left + " to " +ticket.departure + hashMap.get(ticket.departure + "_" + ticket.arrival));
-			// System.out.println(hashMap.get(1 + "_" + stationnum));
-			// System.out.println("left:"+left + " " +"right:"+ right);
-			// System.out.println(hashMap.get(left + "_" + ticket.departure));
-			// System.out.println(hashMap.get(ticket.arrival + "_" + right));
-			// for(int i=0; i<stationnum-1; i++) {
-			// 	for(int j=0; j<stationnum-1; j++) {
-			// 		System.out.print(ticketsArr.get(i*(stationnum-1)+j) + " " );
-			// 	}
-			// 	System.out.println();
-			// }
-			// boolean flag = true;
-			// while (flag) {
-				
-			// }
+			segset.clear(departure - 1, arrival - 1);
 			return true;
 		}
 
 	}
+
 }
