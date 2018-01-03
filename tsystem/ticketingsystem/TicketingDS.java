@@ -87,7 +87,7 @@ public class TicketingDS implements TicketingSystem {
 
 		public int inquiry(int departure, int arrival) {
 			int tickets = 0;
-			for (int i = 0; i < coachnum; i++) {
+			for(int i=0; i<coachnum; i++) {
 				tickets += coachs[i].inquiry(departure, arrival);
 			}
 			return tickets;
@@ -97,10 +97,10 @@ public class TicketingDS implements TicketingSystem {
 			int randcoach = new Random().nextInt(coachnum) % coachnum;
 			for (int i = randcoach; i < randcoach + coachnum; i++) {
 				int coachid = i % coachnum;
-				if (coachs[coachid].inquiry(ticket.departure, ticket.arrival) > 0) {
+				if (coachs[coachid].inquiry(ticket.departure, ticket.arrival)>0) {
 					int seat = coachs[coachid].buy(ticket.departure, ticket.arrival);
-					if (seat > 0) { // successfully bought
-						ticket.coach = coachid + 1;
+					if(seat > 0) { 	// successfully bought
+						ticket.coach = coachid+1;
 						ticket.seat = seat;
 						return true;
 					}
@@ -110,8 +110,7 @@ public class TicketingDS implements TicketingSystem {
 		}
 
 		public boolean refund(Ticket ticket) {
-			if (ticket.coach < 1 || ticket.coach > coachnum)
-				return false;
+			if (ticket.coach < 1 || ticket.coach > coachnum) return false; 
 			return coachs[ticket.coach - 1].refund(ticket);
 		}
 
@@ -126,11 +125,7 @@ public class TicketingDS implements TicketingSystem {
 
 		Seat[] seats;
 
-		// AtomicIntegerArray ticketsArr;
-
-		AtomicIntegerArray[] ticketArrArr;
-		int size;
-		int arrs;
+		AtomicIntegerArray ticketsArr;
 
 		public Coach(int seatnum, int stationnum) {
 			this.seatnum = seatnum;
@@ -140,63 +135,28 @@ public class TicketingDS implements TicketingSystem {
 			for (int i = 0; i < seatnum; i++) {
 				seats[i] = new Seat(stationnum);
 			}
-			this.size = (int) Math.sqrt(seatnum);
-			this.arrs = (int) seatnum / this.size;
-			if (seatnum % this.size > 0)
-				this.arrs++;
 
-			ticketArrArr = new AtomicIntegerArray[this.arrs];
-			for (int k = 0; k < this.arrs; k++) {
-				ticketArrArr[k] = new AtomicIntegerArray((stationnum-1)*(stationnum-1));
-				for (int i = 0; i < this.stationnum - 1; i++) {
-					for (int j = 0; j < this.stationnum - 1; j++) {
-						ticketArrArr[k].set(i * (stationnum - 1) + j, seatnum);
-					}
+			ticketsArr = new AtomicIntegerArray((stationnum - 1) * (stationnum - 1));
+			for (int i = 0; i < stationnum - 1; i++) {
+				for (int j = i; j < stationnum - 1; j++) {
+					ticketsArr.set(i * (stationnum - 1) + j, seatnum);
 				}
 			}
-
-			// ticketsArr = new AtomicIntegerArray((stationnum - 1) * (stationnum - 1));
-			// for (int i = 0; i < stationnum - 1; i++) {
-			// 	for (int j = i; j < stationnum - 1; j++) {
-			// 		ticketsArr.set(i * (stationnum - 1) + j, seatnum);
-			// 	}
-			// }
 		}
 
 		public int inquiry(int departure, int arrival) {
-			if (departure < 1 || arrival > stationnum)
-				return 0;
+			if (departure<1 || arrival>stationnum) return 0;
 			int pos = (departure - 1) * (stationnum - 1) + arrival - 1 - 1;
-			int sum = 0;
-			for (int k = 0; k < this.arrs; k++) {
-				sum += ticketArrArr[k].get(pos);
-			}
-
-			// return ticketsArr.get(pos);
-			return sum;
+			return ticketsArr.get(pos);
 		}
 
 		public int buy(int departure, int arrival) {
-			int pos = (departure - 1) * (stationnum - 1) + arrival - 1 - 1;
-			int k = 0;
-			for (k = 0; k < this.arrs - 1; k++) {
-				if (ticketArrArr[k].get(pos) > 0) {
-					int randseat = new Random().nextInt(this.size) % this.size;
-					for (int i = randseat; i < randseat + this.size; i++) {
-						int seatid = k * this.size + i % this.size;
-						if (seats[seatid].buy(departure, arrival, ticketArrArr[k]))
-							return seatid + 1;
-					}
-				}
+			int randseat = new Random().nextInt(seatnum) % seatnum;
+			for (int i = randseat; i < randseat + seatnum; i++) {
+				int seatid = i % seatnum;
+				if(seats[seatid].buy(departure, arrival, ticketsArr)) 
+					return seatid + 1;
 			}
-
-			if (ticketArrArr[k].get(pos) > 0) {
-				for (int i = k*this.size; i < seatnum; i++) {
-					if (seats[i].buy(departure, arrival, ticketArrArr[k]))
-						return i + 1;
-				}
-			}
-
 			return -1;
 		}
 
@@ -204,8 +164,7 @@ public class TicketingDS implements TicketingSystem {
 			if (ticket.seat < 1 || ticket.seat > seatnum) {
 				return false;
 			}
-			int k = (int)((ticket.seat-1) / this.size);
-			return seats[ticket.seat - 1].refund(ticket.departure, ticket.arrival, ticketArrArr[k]);
+			return seats[ticket.seat - 1].refund(ticket.departure, ticket.arrival, ticketsArr);
 		}
 
 	}
@@ -223,8 +182,7 @@ public class TicketingDS implements TicketingSystem {
 
 		synchronized public boolean buy(int departure, int arrival, AtomicIntegerArray ticketsArr) {
 			BitSet bs = segset.get(departure - 1, arrival - 1);
-			if (!bs.isEmpty())
-				return false;
+			if (!bs.isEmpty()) return false;
 
 			int left = 0, right = stationnum - 1;
 			for (int i = departure - 1; i >= 0; i--) {

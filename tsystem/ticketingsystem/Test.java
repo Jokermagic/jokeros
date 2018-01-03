@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Test {
-	final static int threadnum = 4; // concurrent thread number
+	final static int threadnum = 1; // concurrent thread number
 	final static int routenum = 5; // route is designed from 1 to 3
 	final static int coachnum = 8; // coach is arranged from 1 to 5
 	final static int seatnum = 100; // seat is allocated from 1 to 20
